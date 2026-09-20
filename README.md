@@ -77,4 +77,6 @@ doctor still run.
 macOS with Homebrew and Python 3.13+ (the system `python3` is fine). No
 third-party packages.
 
+<!-- brew cleanup --prune=all -->
+
 <br>
