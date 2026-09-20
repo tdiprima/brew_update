@@ -29,7 +29,7 @@ def brew_path() -> str:
 
 BREW = brew_path()
 
-CYAN = "\033[36m" if sys.stdout.isatty() else ""
+LIME = "\033[38;2;0;255;0m" if sys.stdout.isatty() else ""
 MAGENTA = "\033[35m" if sys.stdout.isatty() else ""
 RESET = "\033[0m" if sys.stdout.isatty() else ""
 
@@ -101,7 +101,7 @@ def run_all(greedy: bool = True, with_doctor: bool = True) -> int:
 
     failed = []
     for name, fn, args in steps:
-        print(f"\n{CYAN}########## {name} ##########{RESET}", flush=True)
+        print(f"\n{LIME}########## {name} ##########{RESET}", flush=True)
         if fn(*args):
             failed.append(name)
 
