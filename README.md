@@ -1,16 +1,16 @@
 # brew_update
 
-Homebrew maintenance in one Python script. The sudo password that cask
-upgrades need is read from the macOS login keychain via
-`security find-generic-password`, so nothing is typed at the prompt and no
-password is stored in the file.
+Homebrew maintenance in one Python script, with all keychain handling in a
+second. The sudo password that cask upgrades need is read from the macOS
+login keychain via `security find-generic-password`, so nothing is typed at
+the prompt and no password is stored in these files.
 
 ## Setup
 
 Store the password once:
 
 ```sh
-python3 brew_maint.py set-password
+python3 keychain.py
 ```
 
 It prompts (hidden input) and writes a generic-password item to the login
@@ -44,7 +44,6 @@ Or one step at a time:
 | `brew_maint.py upgrade` | `brew upgrade --formula`, then `brew upgrade --cask --greedy` |
 | `brew_maint.py cleanup` | `brew autoremove`, `brew cleanup --prune=all -s` |
 | `brew_maint.py doctor` | `brew doctor`, `brew missing` (advisory, never fails) |
-| `brew_maint.py set-password` | store the sudo password in the keychain |
 
 ### Flags
 
@@ -53,7 +52,7 @@ Or one step at a time:
 
 ## How the password gets to sudo
 
-`askpass_env()` writes the password to a temporary file readable only by you,
+`keychain.askpass_env()` writes the password to a temporary file readable only by you,
 plus a one-line helper script that `cat`s it, then points `SUDO_ASKPASS` at
 that helper. Homebrew switches to `sudo -A` when it sees `SUDO_ASKPASS`, so
 privileged cask steps ask the helper instead of the terminal. Both temp files
@@ -65,6 +64,13 @@ are deleted when the upgrade finishes, including on error.
 going through the remaining steps and lists the failures at the end. A
 missing or unreadable keychain item fails the upgrade step only — cleanup and
 doctor still run.
+
+## Files
+
+| File | Role |
+| --- | --- |
+| `brew_maint.py` | the brew steps and the CLI |
+| `keychain.py` | keychain read/write plus the `SUDO_ASKPASS` helper; run directly to store the password |
 
 ## Requirements
 
