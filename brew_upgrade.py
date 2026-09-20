@@ -7,12 +7,16 @@ Casks with pkg installers or privileged payloads ask for root. Homebrew uses
 
 import sys
 
-from brewlib import askpass_env, brew, get_password
+from brewlib import KeychainError, askpass_env, brew, get_password
 
 
 def main(argv: list[str]) -> int:
     greedy = "--no-greedy" not in argv
-    password = get_password()
+    try:
+        password = get_password()
+    except KeychainError as exc:
+        print(f"!!! {exc}", file=sys.stderr, flush=True)
+        return 1
 
     with askpass_env(password) as env:
         status = brew("upgrade", "--formula", env=env)

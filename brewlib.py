@@ -29,6 +29,10 @@ def brew_path() -> str:
 BREW = brew_path()
 
 
+class KeychainError(RuntimeError):
+    """Raised when the sudo password cannot be read from the keychain."""
+
+
 def get_password(service: str = SERVICE, account: str = ACCOUNT) -> str:
     """Read the sudo password out of the login keychain."""
     result = subprocess.run(
@@ -36,7 +40,7 @@ def get_password(service: str = SERVICE, account: str = ACCOUNT) -> str:
         capture_output=True, text=True,
     )
     if result.returncode != 0:
-        sys.exit(
+        raise KeychainError(
             f"No keychain item for service={service!r} account={account!r}.\n"
             f"Run: python3 set_password.py"
         )
