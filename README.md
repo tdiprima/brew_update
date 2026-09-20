@@ -1,16 +1,16 @@
 # brew_update
 
-Homebrew maintenance as small Python scripts, one job per file. The sudo
-password that cask upgrades need is read from the macOS login keychain via
+Homebrew maintenance in one Python script. The sudo password that cask
+upgrades need is read from the macOS login keychain via
 `security find-generic-password`, so nothing is typed at the prompt and no
-password is stored in these files.
+password is stored in the file.
 
 ## Setup
 
 Store the password once:
 
 ```sh
-python3 set_password.py
+python3 brew_maint.py set-password
 ```
 
 It prompts (hidden input) and writes a generic-password item to the login
@@ -33,37 +33,38 @@ stop it asking again.
 Everything, in order — update, upgrade, cleanup, doctor:
 
 ```sh
-python3 brew_all.py
+python3 brew_maint.py
 ```
 
 Or one step at a time:
 
-| Script | What it runs |
+| Command | What it runs |
 | --- | --- |
-| `brew_update.py` | `brew update --force` |
-| `brew_upgrade.py` | `brew upgrade --formula`, then `brew upgrade --cask --greedy` |
-| `brew_cleanup.py` | `brew autoremove`, `brew cleanup --prune=all -s` |
-| `brew_doctor.py` | `brew doctor`, `brew missing` (advisory, never fails) |
+| `brew_maint.py update` | `brew update --force` |
+| `brew_maint.py upgrade` | `brew upgrade --formula`, then `brew upgrade --cask --greedy` |
+| `brew_maint.py cleanup` | `brew autoremove`, `brew cleanup --prune=all -s` |
+| `brew_maint.py doctor` | `brew doctor`, `brew missing` (advisory, never fails) |
+| `brew_maint.py set-password` | store the sudo password in the keychain |
 
 ### Flags
 
-- `--no-greedy` — skip casks that update themselves (passed to
-  `brew_upgrade.py`, or to `brew_all.py`, which forwards it).
-- `--no-doctor` — `brew_all.py` only; stop after cleanup.
+- `--no-greedy` — skip casks that update themselves.
+- `--no-doctor` — with `all` (the default): stop after cleanup.
 
 ## How the password gets to sudo
 
-`brewlib.askpass_env()` writes the password to a temporary file readable only
-by you, plus a one-line helper script that `cat`s it, then points
-`SUDO_ASKPASS` at that helper. Homebrew switches to `sudo -A` when it sees
-`SUDO_ASKPASS`, so privileged cask steps ask the helper instead of the
-terminal. Both temp files are deleted when the upgrade finishes, including on
-error.
+`askpass_env()` writes the password to a temporary file readable only by you,
+plus a one-line helper script that `cat`s it, then points `SUDO_ASKPASS` at
+that helper. Homebrew switches to `sudo -A` when it sees `SUDO_ASKPASS`, so
+privileged cask steps ask the helper instead of the terminal. Both temp files
+are deleted when the upgrade finishes, including on error.
 
 ## Exit codes
 
-`0` when every step succeeded. `1` when any step failed; `brew_all.py` keeps
-going through the remaining steps and lists the failures at the end.
+`0` when every step succeeded. `1` when any step failed; the full pass keeps
+going through the remaining steps and lists the failures at the end. A
+missing or unreadable keychain item fails the upgrade step only — cleanup and
+doctor still run.
 
 ## Requirements
 
