@@ -33,6 +33,10 @@ LIME = "\033[38;2;0;255;0m" if sys.stdout.isatty() else ""
 MAGENTA = "\033[35m" if sys.stdout.isatty() else ""
 RESET = "\033[0m" if sys.stdout.isatty() else ""
 
+# Formulae with no bottle for this machine: source builds take hours or need
+# Xcode.app, so they are pinned before every upgrade.
+SKIP = ("pandoc", "qtbase", "openjdk")
+
 
 def run(args: list[str], env: dict | None = None, check: bool = False) -> int:
     """Run a command, streaming its output; return the exit code."""
@@ -56,8 +60,18 @@ def update() -> int:
     return brew("update", "--force")
 
 
-def upgrade(greedy: bool = True) -> int:
+def pin_skipped(skip: tuple[str, ...] = SKIP) -> None:
+    """Pin the installed formulae in the skip list so upgrade leaves them alone."""
+    installed = subprocess.run([BREW, "list", "--formula", "-1"],
+                               capture_output=True, text=True).stdout.split()
+    to_pin = sorted(set(skip) & set(installed))
+    if to_pin:
+        brew("pin", *to_pin)
+
+
+def upgrade(greedy: bool = True, skip: tuple[str, ...] = SKIP) -> int:
     """Upgrade formulae and casks, feeding sudo from the keychain."""
+    pin_skipped(skip)
     try:
         password = get_password()
     except KeychainError as exc:
@@ -89,11 +103,12 @@ def doctor() -> int:
     return 0
 
 
-def run_all(greedy: bool = True, with_doctor: bool = True) -> int:
+def run_all(greedy: bool = True, with_doctor: bool = True,
+            skip: tuple[str, ...] = SKIP) -> int:
     """Run the whole maintenance pass: update, upgrade, cleanup, doctor."""
     steps = [
         ("update", update, ()),
-        ("upgrade", upgrade, (greedy,)),
+        ("upgrade", upgrade, (greedy, skip)),
         ("cleanup", cleanup, ()),
     ]
     if with_doctor:
@@ -123,15 +138,18 @@ def main(argv: list[str]) -> int:
                         help="skip casks that update themselves")
     parser.add_argument("--no-doctor", action="store_true",
                         help="with 'all': stop after cleanup")
+    parser.add_argument("--skip", action="append", default=[], metavar="FORMULA",
+                        help="also pin this formula before upgrading (repeatable)")
     args = parser.parse_args(argv)
 
     greedy = not args.no_greedy
+    skip = SKIP + tuple(args.skip)
     if args.command == "all":
-        return run_all(greedy=greedy, with_doctor=not args.no_doctor)
+        return run_all(greedy=greedy, with_doctor=not args.no_doctor, skip=skip)
     if args.command == "update":
         return update()
     if args.command == "upgrade":
-        return upgrade(greedy=greedy)
+        return upgrade(greedy=greedy, skip=skip)
     if args.command == "cleanup":
         return cleanup()
     return doctor()
