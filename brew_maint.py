@@ -29,10 +29,15 @@ def brew_path() -> str:
 
 BREW = brew_path()
 
+CYAN = "\033[36m" if sys.stdout.isatty() else ""
+RESET = "\033[0m" if sys.stdout.isatty() else ""
+
 
 def run(args: list[str], env: dict | None = None, check: bool = False) -> int:
     """Run a command, streaming its output; return the exit code."""
     print(f"\n==> {' '.join(args)}", flush=True)
+    env = os.environ.copy() if env is None else dict(env)
+    env.setdefault("NONINTERACTIVE", "1")  # brew answers its own [y/n] prompts
     code = subprocess.run(args, env=env).returncode
     if code != 0:
         print(f"!!! exited {code}: {' '.join(args)}", file=sys.stderr, flush=True)
@@ -95,7 +100,7 @@ def run_all(greedy: bool = True, with_doctor: bool = True) -> int:
 
     failed = []
     for name, fn, args in steps:
-        print(f"\n########## {name} ##########", flush=True)
+        print(f"\n{CYAN}########## {name} ##########{RESET}", flush=True)
         if fn(*args):
             failed.append(name)
 
